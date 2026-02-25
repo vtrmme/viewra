@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Viewra</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.2/peerjs.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap');
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --border: #2a2a3d;
+    --accent: #00f5a0;
+    --accent2: #00c9ff;
+    --text: #e8e8f0;
+    --muted: #6b6b8a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  /* Animated grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,245,160,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,245,160,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    animation: gridMove 20s linear infinite;
+    pointer-events: none;
+  }
+
+  @keyframes gridMove {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(40px); }
+  }
+
+  /* Glow orbs */
+  .orb {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(80px);
+    pointer-events: none;
+    opacity: 0.15;
+  }
+  .orb1 { width: 400px; height: 400px; background: var(--accent); top: -100px; left: -100px; animation: float 8s ease-in-out infinite; }
+  .orb2 { width: 300px; height: 300px; background: var(--accent2); bottom: -50px; right: -50px; animation: float 6s ease-in-out infinite reverse; }
+
+  @keyframes float {
+    0%, 100% { transform: translate(0,0); }
+    50% { transform: translate(30px, 20px); }
+  }
+
+  .container {
+    position: relative;
+    z-index: 10;
+    width: 100%;
+    max-width: 520px;
+    padding: 20px;
+  }
+
+  /* Logo */
+  .logo {
+    text-align: center;
+    margin-bottom: 48px;
+  }
+  .logo h1 {
+    font-size: 2.8rem;
+    font-weight: 800;
+    letter-spacing: -2px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .logo p {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--muted);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-top: 6px;
+  }
+
+  /* Home screen */
+  #home {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(0,245,160,0.15);
+  }
+  .card:hover::before { opacity: 0.05; }
+
+  .card-icon {
+    font-size: 2.2rem;
+    margin-bottom: 14px;
+    position: relative;
+  }
+  .card h2 {
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin-bottom: 6px;
+    position: relative;
+  }
+  .card p {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--muted);
+    line-height: 1.5;
+    position: relative;
+  }
+
+  .card-arrow {
+    position: absolute;
+    top: 28px;
+    right: 28px;
+    color: var(--accent);
+    font-size: 1.4rem;
+    opacity: 0;
+    transition: all 0.3s;
+    transform: translateX(-8px);
+  }
+  .card:hover .card-arrow {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  /* Screens */
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  .screen-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 32px;
+  }
+
+  .back-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .back-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .screen-header h2 {
+    font-size: 1.4rem;
+    font-weight: 700;
+  }
+
+  /* Code display */
+  .code-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    text-align: center;
+    margin-bottom: 20px;
+  }
+
+  .code-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+
+  .code-display {
+    font-family: 'Space Mono', monospace;
+    font-size: 2.8rem;
+    font-weight: 700;
+    letter-spacing: 10px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 16px;
+  }
+
+  .copy-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 1px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .copy-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* Buttons */
+  .btn {
+    width: 100%;
+    padding: 16px;
+    border-radius: 12px;
+    font-family: 'Syne', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s;
+    border: none;
+    letter-spacing: 0.5px;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #000;
+  }
+  .btn-primary:hover {
+    opacity: 0.85;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 24px rgba(0,245,160,0.3);
+  }
+  .btn-primary:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .btn-danger {
+    background: #ff3b3b22;
+    color: #ff6b6b;
+    border: 1px solid #ff3b3b44;
+  }
+  .btn-danger:hover {
+    background: #ff3b3b33;
+    border-color: #ff6b6b;
+  }
+
+  /* Input */
+  .input-group {
+    margin-bottom: 16px;
+  }
+  .input-group label {
+    display: block;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .input-group input {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 1.4rem;
+    font-weight: 700;
+    letter-spacing: 6px;
+    padding: 18px 20px;
+    border-radius: 12px;
+    outline: none;
+    text-align: center;
+    text-transform: uppercase;
+    transition: all 0.2s;
+  }
+  .input-group input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(0,245,160,0.1);
+  }
+  .input-group input::placeholder {
+    color: var(--border);
+    letter-spacing: 6px;
+  }
+
+  /* Status */
+  .status-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    margin-bottom: 16px;
+  }
+
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .status-waiting { background: var(--surface); border: 1px solid var(--border); color: var(--muted); }
+  .status-waiting .status-dot { background: var(--muted); }
+
+  .status-live { background: rgba(0,245,160,0.08); border: 1px solid rgba(0,245,160,0.3); color: var(--accent); }
+  .status-live .status-dot { background: var(--accent); animation: pulse 1.5s infinite; }
+
+  .status-error { background: rgba(255,59,59,0.08); border: 1px solid rgba(255,59,59,0.3); color: #ff6b6b; }
+  .status-error .status-dot { background: #ff6b6b; }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
+
+  /* Video */
+  video {
+    width: 100%;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: #000;
+    max-height: 300px;
+    object-fit: contain;
+    margin-bottom: 16px;
+    display: none;
+  }
+
+  video.visible { display: block; }
+
+  /* Viewers count */
+  .viewers {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--muted);
+    text-align: center;
+    margin-bottom: 16px;
+  }
+  .viewers span { color: var(--accent); }
+
+  /* Divider */
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 20px 0;
+  }
+</style>
+</head>
+<body>
+
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+
+<div class="container">
+  <div class="logo">
+    <h1>Viewra</h1>
+    <p>streaming p2p · sin servidores</p>
+  </div>
+
+  <!-- HOME -->
+  <div id="home">
+    <div class="card" onclick="goTo('broadcast')">
+      <div class="card-icon">📡</div>
+      <h2>Crear retransmisión</h2>
+      <p>Comparte tu pantalla y obtén un código único para que tus amigos se unan.</p>
+      <div class="card-arrow">→</div>
+    </div>
+    <div class="card" onclick="goTo('viewer')">
+      <div class="card-icon">👁️</div>
+      <h2>Unirse con código</h2>
+      <p>Introduce el código de retransmisión para ver la pantalla de tu amigo.</p>
+      <div class="card-arrow">→</div>
+    </div>
+  </div>
+
+  <!-- BROADCAST SCREEN -->
+  <div id="broadcast" class="screen">
+    <div class="screen-header">
+      <button class="back-btn" onclick="goBack()">←</button>
+      <h2>Tu retransmisión</h2>
+    </div>
+
+    <div class="code-box" id="codeBox" style="display:none">
+      <div class="code-label">Código de acceso</div>
+      <div class="code-display" id="myCode">——</div>
+      <button class="copy-btn" onclick="copyCode()">📋 Copiar código</button>
+    </div>
+
+    <div class="status-bar status-waiting" id="broadcastStatus">
+      <div class="status-dot"></div>
+      <span id="broadcastStatusText">Listo para comenzar</span>
+    </div>
+
+    <video id="broadcastPreview" muted autoplay playsinline></video>
+    <div class="viewers" id="viewerCount" style="display:none">
+      Espectadores conectados: <span id="vcNum">0</span>
+    </div>
+
+    <button class="btn btn-primary" id="startBtn" onclick="startBroadcast()">
+      🖥️ Iniciar retransmisión
+    </button>
+    <div class="divider" id="stopDivider" style="display:none"></div>
+    <button class="btn btn-danger" id="stopBtn" style="display:none" onclick="stopBroadcast()">
+      ⏹ Detener retransmisión
+    </button>
+  </div>
+
+  <!-- VIEWER SCREEN -->
+  <div id="viewer" class="screen">
+    <div class="screen-header">
+      <button class="back-btn" onclick="goBack()">←</button>
+      <h2>Unirse a stream</h2>
+    </div>
+
+    <div class="input-group">
+      <label>Código de retransmisión</label>
+      <input type="text" id="codeInput" maxlength="7" placeholder="ES-1234" oninput="this.value=this.value.toUpperCase()">
+    </div>
+
+    <div class="status-bar status-waiting" id="viewerStatus" style="display:none">
+      <div class="status-dot"></div>
+      <span id="viewerStatusText">Conectando...</span>
+    </div>
+
+    <video id="viewerVideo" autoplay playsinline controls></video>
+
+    <button class="btn btn-primary" id="joinBtn" onclick="joinStream()">
+      ▶ Unirse
+    </button>
+    <div class="divider" id="leaveDivider" style="display:none"></div>
+    <button class="btn btn-danger" id="leaveBtn" style="display:none" onclick="leaveStream()">
+      ✕ Salir del stream
+    </button>
+  </div>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────
+let peer = null;
+let localStream = null;
+let viewers = {};
+let viewerCount = 0;
+let viewerConn = null;
+let currentScreen = 'home';
+
+// ── Navigation ─────────────────────────────────────────
+function goTo(screen) {
+  document.getElementById('home').style.display = 'none';
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(screen).classList.add('active');
+  currentScreen = screen;
+}
+
+function goBack() {
+  stopBroadcast();
+  leaveStream();
+  document.getElementById('home').style.display = 'flex';
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  resetBroadcastUI();
+  resetViewerUI();
+  currentScreen = 'home';
+}
+
+// ── Helpers ────────────────────────────────────────────
+async function getCountryCode() {
+  try {
+    const res = await fetch('https://ipapi.co/json/');
+    const data = await res.json();
+    return (data.country_code || 'XX').toUpperCase();
+  } catch(e) {
+    // Fallback: try timezone
+    try {
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const tzMap = {
+        'Europe/Madrid':'ES','Europe/London':'GB','America/New_York':'US',
+        'America/Los_Angeles':'US','America/Chicago':'US','America/Mexico_City':'MX',
+        'America/Argentina/Buenos_Aires':'AR','America/Bogota':'CO','America/Lima':'PE',
+        'America/Santiago':'CL','Europe/Paris':'FR','Europe/Berlin':'DE',
+        'Europe/Rome':'IT','Europe/Lisbon':'PT','Europe/Amsterdam':'NL',
+        'Europe/Warsaw':'PL','Europe/Bucharest':'RO','Europe/Kiev':'UA',
+        'Asia/Tokyo':'JP','Asia/Seoul':'KR','Asia/Shanghai':'CN',
+        'Asia/Kolkata':'IN','Asia/Dubai':'AE','Australia/Sydney':'AU',
+        'America/Sao_Paulo':'BR','Africa/Cairo':'EG','Africa/Lagos':'NG'
+      };
+      return tzMap[tz] || 'XX';
+    } catch(e2) { return 'XX'; }
+  }
+}
+
+async function genCode() {
+  const digits = Math.floor(1000 + Math.random() * 9000);
+  const country = await getCountryCode();
+  return `${country}-${digits}`;
+}
+
+function copyCode() {
+  const code = document.getElementById('myCode').textContent;
+  navigator.clipboard.writeText(code).then(() => {
+    const btn = document.querySelector('.copy-btn');
+    btn.textContent = '✅ Copiado!';
+    setTimeout(() => btn.textContent = '📋 Copiar código', 2000);
+  });
+}
+
+function setStatus(id, type, text) {
+  const bar = document.getElementById(id);
+  bar.className = 'status-bar status-' + type;
+  bar.style.display = 'flex';
+  document.getElementById(id + 'Text').textContent = text;
+}
+
+// ── Broadcast ──────────────────────────────────────────
+async function startBroadcast() {
+  const btn = document.getElementById('startBtn');
+  btn.disabled = true;
+  btn.textContent = 'Iniciando...';
+
+  try {
+    localStream = await navigator.mediaDevices.getDisplayMedia({
+      video: { frameRate: 30 },
+      audio: true
+    });
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = '🖥️ Iniciar retransmisión';
+    setStatus('broadcastStatus', 'error', 'Permiso denegado o cancelado');
+    return;
+  }
+
+  // Show preview
+  const preview = document.getElementById('broadcastPreview');
+  preview.srcObject = localStream;
+  preview.classList.add('visible');
+
+  // Generate code = peer ID
+  const code = await genCode();
+  document.getElementById('myCode').textContent = code;
+  document.getElementById('codeBox').style.display = 'block';
+
+  // Stop if user ends screen share
+  localStream.getVideoTracks()[0].onended = () => stopBroadcast();
+
+  // Init peer
+  peer = new Peer(code, { debug: 0 });
+
+  peer.on('open', () => {
+    setStatus('broadcastStatus', 'live', 'EN DIRECTO · Compartiendo pantalla');
+    btn.style.display = 'none';
+    document.getElementById('stopBtn').style.display = 'block';
+    document.getElementById('stopDivider').style.display = 'block';
+    document.getElementById('viewerCount').style.display = 'block';
+  });
+
+  peer.on('call', call => {
+    call.answer(localStream);
+    const vid = call.peer;
+    viewers[vid] = call;
+    viewerCount++;
+    document.getElementById('vcNum').textContent = viewerCount;
+
+    call.on('close', () => {
+      delete viewers[vid];
+      viewerCount = Math.max(0, viewerCount - 1);
+      document.getElementById('vcNum').textContent = viewerCount;
+    });
+    call.on('error', () => {
+      delete viewers[vid];
+      viewerCount = Math.max(0, viewerCount - 1);
+      document.getElementById('vcNum').textContent = viewerCount;
+    });
+  });
+
+  peer.on('error', (err) => {
+    setStatus('broadcastStatus', 'error', 'Error: ' + err.type);
+  });
+}
+
+function stopBroadcast() {
+  if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
+  if (peer) { peer.destroy(); peer = null; }
+  viewers = {}; viewerCount = 0;
+  resetBroadcastUI();
+}
+
+function resetBroadcastUI() {
+  const btn = document.getElementById('startBtn');
+  btn.disabled = false;
+  btn.textContent = '🖥️ Iniciar retransmisión';
+  btn.style.display = 'block';
+  document.getElementById('stopBtn').style.display = 'none';
+  document.getElementById('stopDivider').style.display = 'none';
+  document.getElementById('codeBox').style.display = 'none';
+  document.getElementById('viewerCount').style.display = 'none';
+  document.getElementById('broadcastStatus').style.display = 'flex';
+  document.getElementById('broadcastStatus').className = 'status-bar status-waiting';
+  document.getElementById('broadcastStatusText').textContent = 'Listo para comenzar';
+  const preview = document.getElementById('broadcastPreview');
+  preview.srcObject = null;
+  preview.classList.remove('visible');
+}
+
+// ── Viewer ─────────────────────────────────────────────
+function joinStream() {
+  const code = document.getElementById('codeInput').value.trim().toUpperCase();
+  if (code.length < 5) { alert('Introduce un código válido (ej: ES-1234)'); return; }
+
+  document.getElementById('joinBtn').disabled = true;
+  document.getElementById('joinBtn').textContent = 'Conectando...';
+  setStatus('viewerStatus', 'waiting', 'Conectando con el emisor...');
+
+  peer = new Peer({ debug: 0 });
+
+  peer.on('open', (myId) => {
+    const call = peer.call(code, new MediaStream()); // empty stream to trigger the call
+    
+    // Actually we need to handle this differently - call with a dummy stream
+    // Create a silent audio track as dummy
+    const ctx = new AudioContext();
+    const dest = ctx.createMediaStreamDestination();
+    const dummyStream = dest.stream;
+
+    const realCall = peer.call(code, dummyStream);
+    viewerConn = realCall;
+
+    realCall.on('stream', (remoteStream) => {
+      const video = document.getElementById('viewerVideo');
+      video.srcObject = remoteStream;
+      video.classList.add('visible');
+      setStatus('viewerStatus', 'live', 'Conectado · Viendo en directo');
+      document.getElementById('joinBtn').style.display = 'none';
+      document.getElementById('leaveBtn').style.display = 'block';
+      document.getElementById('leaveDivider').style.display = 'block';
+      ctx.close();
+    });
+
+    realCall.on('error', () => {
+      setStatus('viewerStatus', 'error', 'Error de conexión');
+      resetViewerJoinBtn();
+    });
+
+    realCall.on('close', () => {
+      setStatus('viewerStatus', 'error', 'El emisor ha cerrado la retransmisión');
+    });
+
+    // Timeout if no stream
+    setTimeout(() => {
+      if (!document.getElementById('viewerVideo').srcObject) {
+        setStatus('viewerStatus', 'error', 'No se encontró ningún emisor con ese código');
+        resetViewerJoinBtn();
+        if (peer) { peer.destroy(); peer = null; }
+      }
+    }, 8000);
+  });
+
+  peer.on('error', (err) => {
+    if (err.type === 'peer-unavailable') {
+      setStatus('viewerStatus', 'error', 'Código incorrecto o retransmisión no activa');
+    } else {
+      setStatus('viewerStatus', 'error', 'Error: ' + err.type);
+    }
+    resetViewerJoinBtn();
+  });
+}
+
+function leaveStream() {
+  if (viewerConn) { viewerConn.close(); viewerConn = null; }
+  if (peer) { peer.destroy(); peer = null; }
+  resetViewerUI();
+}
+
+function resetViewerJoinBtn() {
+  document.getElementById('joinBtn').disabled = false;
+  document.getElementById('joinBtn').textContent = '▶ Unirse';
+}
+
+function resetViewerUI() {
+  resetViewerJoinBtn();
+  document.getElementById('joinBtn').style.display = 'block';
+  document.getElementById('leaveBtn').style.display = 'none';
+  document.getElementById('leaveDivider').style.display = 'none';
+  document.getElementById('viewerStatus').style.display = 'none';
+  const video = document.getElementById('viewerVideo');
+  video.srcObject = null;
+  video.classList.remove('visible');
+  document.getElementById('codeInput').value = '';
+}
+</script>
+</body>
+</html>
