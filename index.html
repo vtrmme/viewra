@@ -457,7 +457,7 @@
 
     <div class="input-group">
       <label>Código de retransmisión</label>
-      <input type="text" id="codeInput" maxlength="7" placeholder="ES-1234" oninput="this.value=this.value.toUpperCase()">
+      <input type="text" id="codeInput" maxlength="6" placeholder="ES1234" oninput="this.value=this.value.toUpperCase()">
     </div>
 
     <div class="status-bar status-waiting" id="viewerStatus" style="display:none">
@@ -533,7 +533,7 @@ async function getCountryCode() {
 async function genCode() {
   const digits = Math.floor(1000 + Math.random() * 9000);
   const country = await getCountryCode();
-  return `${country}-${digits}`;
+  return `${country}${digits}`;  // sin guión, PeerJS no acepta IDs con guiones
 }
 
 function copyCode() {
@@ -653,7 +653,7 @@ function resetBroadcastUI() {
 // ── Viewer ─────────────────────────────────────────────
 function joinStream() {
   const code = document.getElementById('codeInput').value.trim().toUpperCase();
-  if (code.length < 5) { alert('Introduce un código válido (ej: ES-1234)'); return; }
+  if (code.length < 6) { alert('Introduce un código válido (ej: ES1234)'); return; }
 
   document.getElementById('joinBtn').disabled = true;
   document.getElementById('joinBtn').textContent = 'Conectando...';
