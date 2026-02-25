@@ -583,8 +583,16 @@ async function startBroadcast() {
   // Stop if user ends screen share
   localStream.getVideoTracks()[0].onended = () => stopBroadcast();
 
-  // Init peer
-  peer = new Peer(code, { debug: 0 });
+  const iceConfig = {
+    iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' },
+      { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+      { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+      { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
+    ]
+  };
+  peer = new Peer(code, { debug: 0, config: iceConfig });
 
   peer.on('open', () => {
     setStatus('broadcastStatus', 'live', 'EN DIRECTO · Compartiendo pantalla');
@@ -651,7 +659,16 @@ function joinStream() {
   document.getElementById('joinBtn').textContent = 'Conectando...';
   setStatus('viewerStatus', 'waiting', 'Conectando con el emisor...');
 
-  peer = new Peer({ debug: 0 });
+  const iceConfig = {
+    iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' },
+      { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+      { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+      { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
+    ]
+  };
+  peer = new Peer({ debug: 0, config: iceConfig });
 
   peer.on('open', (myId) => {
     const call = peer.call(code, new MediaStream()); // empty stream to trigger the call
